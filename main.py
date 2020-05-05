@@ -29,6 +29,9 @@ from LogMetric import AverageMeter, Logger
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
+#lambda x
+def abcd(x, stat_dict1):
+    return datasets.utils.normalize_data(x,stat_dict1['target_mean'],stat_dict1['target_std'])
 
 
 # Parser check
@@ -106,12 +109,12 @@ def main():
     print('\tStatistics')
     stat_dict = datasets.utils.get_graph_stats(data_valid, ['target_mean', 'target_std'])
 
-    data_train.set_target_transform(lambda x: datasets.utils.normalize_data(x,stat_dict['target_mean'],
-                                                                            stat_dict['target_std']))
-    data_valid.set_target_transform(lambda x: datasets.utils.normalize_data(x, stat_dict['target_mean'],
-                                                                            stat_dict['target_std']))
-    data_test.set_target_transform(lambda x: datasets.utils.normalize_data(x, stat_dict['target_mean'],
-                                                                           stat_dict['target_std']))
+    data_train.set_target_transform(abcd)
+    data_valid.set_target_transform(abcd)
+    data_test.set_target_transform(abcd)
+    data_train.set_stat_dict(stat_dict)
+    data_valid.set_stat_dict(stat_dict)
+    data_test.set_stat_dict(stat_dict)
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
@@ -242,8 +245,8 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
         train_loss = criterion(output, target)
 
         # Logs
-        losses.update(train_loss.data[0], g.size(0))
-        error_ratio.update(evaluation(output, target).data[0], g.size(0))
+        losses.update(train_loss.data, g.size(0))
+        error_ratio.update(evaluation(output, target).data, g.size(0))
 
         # compute gradient and do SGD step
         train_loss.backward()
@@ -290,8 +293,8 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
         output = model(g, h, e)
 
         # Logs
-        losses.update(criterion(output, target).data[0], g.size(0))
-        error_ratio.update(evaluation(output, target).data[0], g.size(0))
+        losses.update(criterion(output, target).data, g.size(0))
+        error_ratio.update(evaluation(output, target).data, g.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
